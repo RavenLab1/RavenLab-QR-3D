@@ -23,10 +23,15 @@ export async function combine(triangles,matrix,options){
   const box=(dims,at)=>keep(keep(M.cube(dims)).translate(at));
   const sourceVolume=model.volume();
   if(options.pad){
-   const probe=box([size,size,.15],[x-size/2,y-size/2,z]);const contact=keep(probe.intersect(model));
-   if(contact.volume()<size*size*.15*.85)throw Error('القاعدة المضافة لا تلامس مساحة كافية من أسفل المجسّم. صغّر الحجم أو غيّر الموضع.');
-   const thickness=Math.max(.8,depth+.4),pad=box([size,size,thickness+.02],[x-size/2,y-size/2,z-thickness]);
-   model=keep(model.add(pad));z-=thickness;
+   const thickness=Math.max(.8,depth+.4);
+   if(b.max[2]-z<thickness)throw Error('����� ������� ��� �� ����� ����� ��������. ���� ����� �����.');
+   const fill=box([size,size,thickness],[x-size/2,y-size/2,z]);
+   // A solid perimeter prevents the fill from extending outside the model outline.
+   const inner=box([size-.4,size-.4,thickness],[x-size/2+.2,y-size/2+.2,z]);
+   const rim=keep(fill.subtract(inner)),unsupported=keep(rim.subtract(model));
+   if(unsupported.volume()>.0001)throw Error('����� ����� ���� ���� ��� ����� �� ��� ���� ��� �����. ���� ����� �� ���� �����.');
+   model=keep(model.add(fill));
+
   }
   // An exact solid-volume check keeps the complete QR and quiet zone on a flat, solid underside.
   const supportDepth=style==='emboss'?.3:depth+.3;
@@ -50,4 +55,3 @@ export async function combine(triangles,matrix,options){
   return {triangles:trianglesOf(result),cell,volume,newVolume,sourceVolume,bounds:result.boundingBox(),components:count,surfaceZ:z};
  }finally{for(let i=held.length-1;i>=0;i--)held[i].delete();}
 }
-
